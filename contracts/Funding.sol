@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.0;
+
+
+contract Funding {
+    uint public raised;
+    uint public goal;
+    address public owner;
+
+    event Donated(uint donation);
+    event Withdrew(uint amount);
+    
+
+    modifier onlyOwner() {
+        require(owner == msg.sender);
+        _;
+    }
+
+    modifier isFinished() {
+        require(isFunded());
+        _;
+    }
+    
+    modifier notFinished() {
+        require(!isFunded());
+        _;
+    }
+
+    constructor (uint _goal) {
+        owner = msg.sender;
+        goal = _goal;
+    }
+
+    function isFunded() public view returns (bool) {
+        return raised >= goal;
+    }
+
+    function donate() public payable notFinished {
+        uint refund;
+        raised += msg.value;
+        if (raised > goal) {
+            refund = raised - goal;
+            raised -= refund;
+            payable(msg.sender).transfer(refund);
+        }
+        emit Donated(msg.value);
+    }
+
+    function withdraw() public onlyOwner isFinished {
+        uint amount = address(this).balance;
+        payable(owner).transfer(amount);
+        emit Withdrew(amount);
+    }
+}
